@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>希望休管理 - 管理者用</title>
+<title>希望休管理日本人 - 管理者用</title>
 <style>
   :root {
     --bg:#f7f7f8; --card-bg:#ffffff; --text:#1f2328; --text-muted:#6b7280;
@@ -61,7 +61,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🛠️ 希望休管理(管理者用)</h1>
+  <h1>🛠️ 日本人希望休管理(知花用)</h1>
 
   <div class="card">
     <div class="month-nav">
@@ -76,10 +76,9 @@
       <table id="adminTable"><tbody></tbody></table>
     </div>
     <div class="hint">
-      このページには日数の上限や人数上限はありません。「現在の希望者数」は参考情報としてのみ表示されます。<br>
       <span class="legend-swatch" style="background:var(--off-bg);"></span>従業員が選んだ休み<br>
-      <span class="legend-swatch" style="background:var(--admin-bg);"></span>管理者が追加した休み(表の日付セルをクリックすると追加/解除できます)<br>
-      送信済みの従業員には表の右端に「取消」ボタンが表示され、押すとその月の送信を取り消して再送信できるようになります。
+      <span class="legend-swatch" style="background:var(--admin-bg);"></span>責任者が追加した休み(表の日付セルをクリックすると追加/解除できます)<br>
+      送信済みの従業員には表の右端に「取消」ボタンが表示されます。押すと再送信できるようになります。
     </div>
     <div id="adminEmpty" class="empty-state" style="display:none;"></div>
     <div class="row" style="margin-top:12px; justify-content:flex-end;">
@@ -88,18 +87,18 @@
   </div>
 
   <div class="card" id="noteCard" style="display:none;">
-    <h2>従業員からの連絡事項(有給申請など)</h2>
+    <h2>従業員からの連絡事項</h2>
     <div class="note-list" id="noteList"></div>
   </div>
 
   <div class="card">
-    <h2>従業員リストの管理</h2>
+    <h2>従業員リスト</h2>
     <div class="row">
       <input type="text" id="newEmpName" placeholder="新しい従業員名を入力">
-      <button onclick="addEmployee()">追加</button>
+      <button onclick="addEmployee()">追加！！</button>
     </div>
     <div class="emp-manage-list" id="empManageList"></div>
-    <div class="hint">「リンクをコピー」で、その従業員専用のURL(名前入り)をコピーできます。従業員はそのリンクを開くだけで、名前選択なしに自分のカレンダーが表示されます。</div>
+    <div class="hint">「リンクをコピー」で、その従業員専用のURLをコピーできます。</div>
   </div>
 </div>
 
@@ -203,7 +202,7 @@ function renderAdminTable() {
   if (employees.length === 0) {
     table.innerHTML = "";
     empty.style.display = 'block';
-    empty.textContent = "従業員が登録されていません。下の「従業員リストの管理」から追加してください。";
+    empty.textContent = "下の「従業員リスト」から追加してください。";
     return;
   }
   empty.style.display = 'none';
