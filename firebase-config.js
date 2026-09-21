@@ -8,10 +8,10 @@
 // 使うと、データが混ざってしまいます。
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyD3YhpGdQVxO0BU9NZmle_43I_4ZiDKkts",
+  authDomain: "hiltonoffreqjp.firebaseapp.com",
+  projectId: "hiltonoffreqjp",
+  storageBucket: "hiltonoffreqjp.firebasestorage.app",
+  messagingSenderId: "790415028029",
+  appId: "1:790415028029:web:39ec0873d147db7a5d1f54"
 };
