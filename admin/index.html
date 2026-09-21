@@ -21,7 +21,7 @@
   }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",Roboto,sans-serif; min-height:100vh; padding:16px; }
-  .wrap { max-width:760px; margin:0 auto; }
+  .wrap { max-width:1200px; margin:0 auto; }
   h1 { font-size:20px; margin:4px 0 16px; }
   .card { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
   .card h2 { font-size:15px; margin:0 0 12px; color:var(--text-muted); font-weight:600; }
@@ -33,16 +33,19 @@
   .month-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:14px; }
   .month-nav .label { font-size:16px; font-weight:700; min-width:110px; text-align:center; }
   .month-nav button { padding:6px 12px; }
-  table { width:100%; border-collapse:collapse; font-size:12px; }
-  th, td { border:1px solid var(--border); padding:4px 3px; text-align:center; min-width:26px; }
+  table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; }
+  th, td { border:1px solid var(--border); padding:2px 1px; text-align:center; overflow:hidden; }
   th { background:var(--hover-bg); position:sticky; top:0; }
-  td.emp-name, th.emp-name { text-align:left; font-weight:600; white-space:nowrap; position:sticky; left:0; background:var(--card-bg); }
+  td.emp-name, th.emp-name { text-align:left; font-weight:600; white-space:normal; overflow-wrap:break-word; word-break:break-word; line-height:1.2; position:sticky; left:0; background:var(--card-bg); width:46px; font-size:9px; vertical-align:middle; }
   td.day-cell { cursor:pointer; }
+  th.day-col, td.day-col { width:22px; }
+  th.op-col, td.op-col { width:40px; }
   td.mark-off { background:var(--off-bg); color:var(--off-text); font-weight:700; }
   td.mark-admin { background:var(--admin-bg); color:var(--admin-text); font-weight:700; }
   td.mark-off.mark-admin { background:linear-gradient(135deg, var(--off-bg) 50%, var(--admin-bg) 50%); color:var(--off-text); }
   td.usage-cell { font-weight:700; }
   tr.usage-row td { background:var(--hover-bg); }
+  button.danger.cell-btn { padding:2px 4px; font-size:10px; white-space:nowrap; }
   .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .emp-manage-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
   .emp-manage-item { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:var(--bg); border-radius:8px; border:1px solid var(--border); gap:8px; flex-wrap:wrap; }
@@ -76,10 +79,9 @@
       <table id="adminTable"><tbody></tbody></table>
     </div>
     <div class="hint">
-      このページには日数の上限や人数上限はありません。「現在の希望者数」は参考情報としてのみ表示されます。<br>
       <span class="legend-swatch" style="background:var(--off-bg);"></span>従業員が選んだ休み<br>
       <span class="legend-swatch" style="background:var(--admin-bg);"></span>管理者が追加した休み(表の日付セルをクリックすると追加/解除できます)<br>
-      送信済みの従業員には表の右端に「取消」ボタンが表示され、押すとその月の送信を取り消して再送信できるようになります。
+      送信済みの従業員には表の右端に「取消」ボタンが表示され押すと再送信できるようになります。
     </div>
     <div id="adminEmpty" class="empty-state" style="display:none;"></div>
     <div class="row" style="margin-top:12px; justify-content:flex-end;">
@@ -93,13 +95,13 @@
   </div>
 
   <div class="card">
-    <h2>従業員リストの管理</h2>
+    <h2>従業員リスト</h2>
     <div class="row">
       <input type="text" id="newEmpName" placeholder="新しい従業員名を入力">
       <button onclick="addEmployee()">追加</button>
     </div>
     <div class="emp-manage-list" id="empManageList"></div>
-    <div class="hint">「リンクをコピー」で、その従業員専用のURL(名前入り)をコピーできます。従業員はそのリンクを開くだけで、名前選択なしに自分のカレンダーが表示されます。</div>
+    <div class="hint">「リンクをコピー」で、その従業員専用のURLをコピーできます。</div>
   </div>
 </div>
 
@@ -203,7 +205,7 @@ function renderAdminTable() {
   if (employees.length === 0) {
     table.innerHTML = "";
     empty.style.display = 'block';
-    empty.textContent = "従業員が登録されていません。下の「従業員リストの管理」から追加してください。";
+    empty.textContent = "従業員が登録されていません。下の「従業員リスト」から追加してください。";
     return;
   }
   empty.style.display = 'none';
@@ -217,15 +219,15 @@ function renderAdminTable() {
   let html = "<thead><tr><th class='emp-name'>氏名</th>";
   for (let d = 1; d <= daysInMonth; d++) {
     const dow = new Date(adminDate.getFullYear(), adminDate.getMonth(), d).getDay();
-    html += `<th style="color:${dow === 0 ? '#ef4444' : dow === 6 ? '#3b82f6' : 'inherit'}">${d}</th>`;
+    html += `<th class="day-col" style="color:${dow === 0 ? '#ef4444' : dow === 6 ? '#3b82f6' : 'inherit'}">${d}</th>`;
   }
-  html += "<th>操作</th></tr></thead><tbody>";
+  html += "<th class='op-col'>操作</th></tr></thead><tbody>";
 
   html += "<tr class='usage-row'><td class='emp-name'>現在の希望者数</td>";
   for (let d = 1; d <= daysInMonth; d++) {
-    html += `<td class="usage-cell">${dayCounts[d] || 0}</td>`;
+    html += `<td class="usage-cell day-col">${dayCounts[d] || 0}</td>`;
   }
-  html += "<td></td></tr>";
+  html += "<td class='op-col'></td></tr>";
 
   employees.forEach(name => {
     const rec = map[name] || { offDays: [], adminDays: [], submittedByEmployee: false };
@@ -239,13 +241,14 @@ function renderAdminTable() {
       const cls = ['day-cell'];
       if (isOff) cls.push('mark-off');
       if (isAdmin) cls.push('mark-admin');
+      cls.push('day-col');
       const label = (isOff || isAdmin) ? '×' : '';
       html += `<td class="${cls.join(' ')}" onclick="toggleAdminDay('${safeName}', ${d})" title="クリックで管理者追加の休みを切り替え">${label}</td>`;
     }
     if (rec.submittedByEmployee) {
-      html += `<td><button class="danger" onclick="resetSubmission('${safeName}')">取消</button></td>`;
+      html += `<td class="op-col"><button class="danger cell-btn" onclick="resetSubmission('${safeName}')">取消</button></td>`;
     } else {
-      html += "<td></td>";
+      html += "<td class='op-col'></td>";
     }
     html += "</tr>";
   });
@@ -285,7 +288,7 @@ function renderNoteList() {
 
 async function resetSubmission(name) {
   const ym = monthKey(adminDate);
-  const ok = window.confirm(`${name}さんの${monthLabelText(adminDate)}分の送信済み希望休を取り消します。\n管理者が追加した休みや連絡事項も一緒に削除されます。\n取り消すと本人が再度送信できるようになります。よろしいですか？`);
+  const ok = window.confirm("取り消します。よろしいですか？");
   if (!ok) return;
   try {
     await deleteDoc(doc(db, "requests", name + "__" + ym));
