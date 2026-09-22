@@ -60,7 +60,7 @@
 
   <div id="mainContent" style="display:none;">
     <div class="card">
-      <h2>名前</h2>
+      <h2>お名前</h2>
       <div class="row" style="justify-content:space-between;">
         <div style="font-size:16px; font-weight:700;" id="fixedNameLabel"></div>
       </div>
@@ -76,10 +76,10 @@
       <div class="status-msg" id="alreadySubmittedMsg" style="display:none; margin-bottom:10px;">この月はすでに送信済みです。希望休は1回のみ送信できます（変更が必要な場合は管理者にご連絡ください）。</div>
       <div class="status-msg" id="selectionSummary" style="margin-bottom:8px; font-weight:600;"></div>
       <div class="day-list" id="dayListContainer"></div>
-      <div class="legend" id="dayListLegend">休みたい日をタップして選択してください。「会社側指定」のラベルが付いた日は責任者が追加した休みです。送信は月ごとに1回のみです。</div>
+      <div class="legend" id="dayListLegend">休みたい日をタップして選択してください。日数の上限はありません。「会社側指定」のラベルが付いた日は管理者が追加した休みです。送信は月ごとに1回のみです。</div>
       <div class="row" style="margin-top:12px; flex-direction:column; align-items:stretch;" id="noteRow">
         <label for="noteInput" style="font-size:13px; font-weight:600; margin-bottom:6px;">連絡事項(有給申請など、任意入力)</label>
-        <textarea id="noteInput" class="note-input" placeholder="シフトに関する希望などがあれば入力してください(空欄でも送信できます)"></textarea>
+        <textarea id="noteInput" class="note-input" placeholder="伝えたいことがあれば入力してください(空欄でも送信できます)"></textarea>
       </div>
       <div class="submit-row" id="submitRow">
         <span class="status-msg" id="submitStatus"></span>
@@ -244,8 +244,24 @@ async function submitRequest() {
     document.getElementById('submitStatus').textContent = "この月はすでに送信済みです。希望休は1回のみ送信できます。";
     return;
   }
-  document.getElementById('submitStatus').textContent = "送信中...";
   const ym = monthKey(currentDate);
+  // 画面の描画が古い状態のまま(非公開になったのを従業員側がまだ検知していない)でも
+  // 送信できてしまわないよう、送信の直前に最新の公開設定を取得して確認する
+  try {
+    const freshVisSnap = await getDoc(doc(db, "settings", "monthVisibility"));
+    const freshClosed = new Set(freshVisSnap.exists() ? (freshVisSnap.data().closed || []) : []);
+    if (freshClosed.has(ym)) {
+      closedMonths = freshClosed;
+      renderEmployeeDayList();
+      document.getElementById('submitStatus').textContent = "この月の希望休受付は現在停止しています。";
+      return;
+    }
+  } catch (e) {
+    console.error(e);
+    document.getElementById('submitStatus').textContent = "送信に失敗しました";
+    return;
+  }
+  document.getElementById('submitStatus').textContent = "送信中...";
   const ownDocRef = doc(db, "requests", selectedEmployee + "__" + ym);
   const noteValue = (document.getElementById('noteInput').value || "").trim();
   try {
