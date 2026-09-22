@@ -43,8 +43,10 @@
   td.mark-off { background:var(--off-bg); color:var(--off-text); font-weight:700; }
   td.mark-admin { background:var(--admin-bg); color:var(--admin-text); font-weight:700; }
   td.mark-off.mark-admin { background:linear-gradient(135deg, var(--off-bg) 50%, var(--admin-bg) 50%); color:var(--off-text); }
+  td.quota-input-cell input { width:100%; padding:1px; font-size:10px; text-align:center; border-radius:4px; -moz-appearance:textfield; }
+  td.quota-input-cell input::-webkit-outer-spin-button, td.quota-input-cell input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
   td.usage-cell { font-weight:700; }
-  tr.usage-row td { background:var(--hover-bg); }
+  tr.quota-row td, tr.usage-row td { background:var(--hover-bg); }
   button.danger.cell-btn { padding:2px 4px; font-size:10px; white-space:nowrap; }
   .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .emp-manage-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
@@ -114,11 +116,14 @@ import {
 let employees = [];
 let adminDate = new Date();
 let adminRequestsCache = {};
+let adminOutValues = {};
+let adminStayValues = {};
 let closedMonths = new Set();
 
 function changeAdminMonth(delta) {
   adminDate = new Date(adminDate.getFullYear(), adminDate.getMonth() + delta, 1);
   subscribeAdminMonth();
+  subscribeAdminCapacity();
   renderAdminVisibilityToggle();
 }
 window.changeAdminMonth = changeAdminMonth;
@@ -145,6 +150,42 @@ function subscribeAdminMonth() {
     renderNoteList();
   }, err => console.error(err));
 }
+
+let unsubAdminCapacity = null;
+function subscribeAdminCapacity() {
+  if (unsubAdminCapacity) { unsubAdminCapacity(); unsubAdminCapacity = null; }
+  const ym = monthKey(adminDate);
+  unsubAdminCapacity = onSnapshot(doc(db, "capacity", ym), snap => {
+    const data = snap.exists() ? snap.data() : {};
+    adminOutValues = data.out || {};
+    adminStayValues = data.stay || {};
+    renderAdminTable();
+  }, err => console.error(err));
+}
+
+async function onOutInputChange(day, value) {
+  const ym = monthKey(adminDate);
+  const updated = { ...adminOutValues };
+  if (value === "" || value === null || isNaN(Number(value))) delete updated[String(day)];
+  else updated[String(day)] = Number(value);
+  adminOutValues = updated;
+  try {
+    await setDoc(doc(db, "capacity", ym), { out: updated }, { merge: true });
+  } catch (e) { console.error(e); }
+}
+window.onOutInputChange = onOutInputChange;
+
+async function onStayInputChange(day, value) {
+  const ym = monthKey(adminDate);
+  const updated = { ...adminStayValues };
+  if (value === "" || value === null || isNaN(Number(value))) delete updated[String(day)];
+  else updated[String(day)] = Number(value);
+  adminStayValues = updated;
+  try {
+    await setDoc(doc(db, "capacity", ym), { stay: updated }, { merge: true });
+  } catch (e) { console.error(e); }
+}
+window.onStayInputChange = onStayInputChange;
 
 function subscribeMonthVisibility() {
   onSnapshot(doc(db, "settings", "monthVisibility"), snap => {
@@ -222,6 +263,20 @@ function renderAdminTable() {
     html += `<th class="day-col" style="color:${dow === 0 ? '#ef4444' : dow === 6 ? '#3b82f6' : 'inherit'}">${d}</th>`;
   }
   html += "<th class='op-col'>操作</th></tr></thead><tbody>";
+
+  html += "<tr class='quota-row'><td class='emp-name'>アウト</td>";
+  for (let d = 1; d <= daysInMonth; d++) {
+    const val = adminOutValues[String(d)];
+    html += `<td class="day-col quota-input-cell"><input type="number" min="0" value="${val !== undefined && val !== null ? val : ''}" placeholder="-" onchange="onOutInputChange(${d}, this.value)"></td>`;
+  }
+  html += "<td class='op-col'></td></tr>";
+
+  html += "<tr class='quota-row'><td class='emp-name'>ステイ</td>";
+  for (let d = 1; d <= daysInMonth; d++) {
+    const val = adminStayValues[String(d)];
+    html += `<td class="day-col quota-input-cell"><input type="number" min="0" value="${val !== undefined && val !== null ? val : ''}" placeholder="-" onchange="onStayInputChange(${d}, this.value)"></td>`;
+  }
+  html += "<td class='op-col'></td></tr>";
 
   html += "<tr class='usage-row'><td class='emp-name'>現在の希望者数</td>";
   for (let d = 1; d <= daysInMonth; d++) {
@@ -406,6 +461,18 @@ function exportExcel() {
   // ヘッダー行
   rows.push(["氏名", ...dayHeaders, "連絡事項"]);
 
+  // アウト行
+  rows.push(["アウト", ...dayHeaders.map(d => {
+    const val = adminOutValues[String(d)];
+    return (val !== undefined && val !== null && val !== "") ? Number(val) : "";
+  }), ""]);
+
+  // ステイ行
+  rows.push(["ステイ", ...dayHeaders.map(d => {
+    const val = adminStayValues[String(d)];
+    return (val !== undefined && val !== null && val !== "") ? Number(val) : "";
+  }), ""]);
+
   // 現在の希望者数行(参考情報)
   rows.push(["現在の希望者数", ...dayHeaders.map(d => dayCounts[d] || 0), ""]);
 
@@ -426,9 +493,9 @@ function exportExcel() {
   // 列幅の調整(氏名列は広め、日付列は狭め、連絡事項列は広め)
   ws['!cols'] = [{ wch: 14 }, ...dayHeaders.map(() => ({ wch: 4 })), { wch: 30 }];
 
-  // 上部2行(ヘッダー・希望者数)を常に表示したままスクロールできるようにする
-  ws['!freeze'] = { xSplit: 1, ySplit: 2 };
-  ws['!panes'] = [{ xSplit: 1, ySplit: 2, topLeftCell: "B3", activePane: "bottomRight", state: "frozen" }];
+  // 上部4行(ヘッダー・アウト・ステイ・希望者数)を常に表示したままスクロールできるようにする
+  ws['!freeze'] = { xSplit: 1, ySplit: 4 };
+  ws['!panes'] = [{ xSplit: 1, ySplit: 4, topLeftCell: "B5", activePane: "bottomRight", state: "frozen" }];
 
   const wb = XLSX.utils.book_new();
   const sheetName = monthLabelText(adminDate).replace(/[\\/?*[\]:]/g, "");
@@ -441,6 +508,7 @@ function init() {
   document.getElementById('adminMonthLabel').textContent = monthLabelText(adminDate);
   subscribeEmployeeList();
   subscribeAdminMonth();
+  subscribeAdminCapacity();
   subscribeMonthVisibility();
   renderAdminVisibilityToggle();
 }
