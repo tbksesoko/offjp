@@ -66,7 +66,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🛠️ 日本人希望休管理(知花用)</h1>
+  <h1>🛠️ 希望休管理(管理者用)</h1>
 
   <div class="card">
     <div class="month-nav">
@@ -100,7 +100,7 @@
     <h2>従業員リスト</h2>
     <div class="row">
       <input type="text" id="newEmpName" placeholder="新しい従業員名を入力">
-      <button onclick="addEmployee()">追加！！</button>
+      <button onclick="addEmployee()">追加</button>
     </div>
     <div class="emp-manage-list" id="empManageList"></div>
     <div class="hint">「リンクをコピー」で、その従業員専用のURLをコピーできます。</div>
@@ -252,7 +252,10 @@ function renderAdminTable() {
   empty.style.display = 'none';
 
   const dayCounts = {};
-  Object.values(map).forEach(rec => {
+  const currentNamesForCount = new Set(employees);
+  // 従業員リストから削除された人のデータは希望者数のカウントに含めない
+  Object.entries(map).forEach(([name, rec]) => {
+    if (!currentNamesForCount.has(name)) return;
     const combined = new Set([...(rec.offDays || []), ...(rec.adminDays || [])]);
     combined.forEach(d => { dayCounts[d] = (dayCounts[d] || 0) + 1; });
   });
@@ -450,7 +453,10 @@ function exportExcel() {
   const daysInMonth = daysInMonthOf(adminDate);
 
   const dayCounts = {};
-  Object.values(map).forEach(rec => {
+  const currentNamesForCount = new Set(employees);
+  // 従業員リストから削除された人のデータは希望者数のカウントに含めない
+  Object.entries(map).forEach(([name, rec]) => {
+    if (!currentNamesForCount.has(name)) return;
     const combined = new Set([...(rec.offDays || []), ...(rec.adminDays || [])]);
     combined.forEach(d => { dayCounts[d] = (dayCounts[d] || 0) + 1; });
   });
